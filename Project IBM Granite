@@ -1,0 +1,256 @@
+# 1. Pilih Negara untuk Dibandingkan
+countries = ['Indonesia', 'China', 'United States', 'India', 'Japan', 'Germany']
+df_compare = df_clean[df_clean['Country Name'].isin(countries)]
+
+# 2. Plot Perbandingan
+plt.figure(figsize=(14, 8))
+sns.lineplot(
+    x='Year',
+    y='GDP_Per_Capita',
+    hue='Country Name', # Membedakan garis berdasarkan nama negara
+    data=df_compare,
+    linewidth=2.5
+)
+plt.title('Perbandingan GDP Per Kapita Negara Pilihan (1960-2024)', fontsize=16)
+plt.xlabel('Tahun')
+plt.ylabel('GDP Per Kapita (US$)')
+plt.legend(title='Negara')
+plt.grid(True, linestyle=':', alpha=0.6)
+plt.show()
+
+# Perhatikan titik-titik persilangan, percepatan, dan perlambatan antar negara.
+# 1. Filter data untuk tahun terakhir (misalnya 2024)
+latest_year = df_clean['Year'].max()
+df_latest = df_clean[df_clean['Year'] == latest_year].sort_values(
+    by='GDP_Per_Capita',
+    ascending=False
+).head(10)
+
+# 2. Plot Bar Chart
+plt.figure(figsize=(10, 6))
+sns.barplot(
+    x='GDP_Per_Capita',
+    y='Country Name',
+    data=df_latest,
+    palette='viridis'
+)
+plt.title(f'Top 10 Negara berdasarkan GDP Per Kapita ({latest_year})', fontsize=16)
+plt.xlabel('GDP Per Kapita (US$)')
+plt.ylabel('Negara')
+plt.show()
+# 1. Hitung Tingkat Pertumbuhan (Growth Rate)
+df_growth = df_clean.copy()
+df_growth['Lag_GDP'] = df_growth.groupby('Country Name')['GDP_Per_Capita'].shift(1)
+df_growth['Growth_Rate'] = ((df_growth['GDP_Per_Capita'] - df_growth['Lag_GDP']) / df_growth['Lag_GDP']) * 100
+
+# 2. Filter data untuk negara yang dipilih dan hanya fokus pada tahun 2000 ke atas
+df_growth_compare = df_growth[df_growth['Country Name'].isin(countries)]
+df_growth_compare = df_growth_compare[df_growth_compare['Year'] >= 2000]
+
+# 3. Plot Tingkat Pertumbuhan
+plt.figure(figsize=(14, 8))
+sns.lineplot(
+    x='Year',
+    y='Growth_Rate',
+    hue='Country Name',
+    data=df_growth_compare,
+    linewidth=2,
+    palette='Dark2'
+)
+plt.title('Perbandingan Pertumbuhan Tahunan GDP Per Kapita (Setelah 2000)', fontsize=16)
+plt.xlabel('Tahun')
+plt.ylabel('Tingkat Pertumbuhan Tahunan (%)')
+plt.axhline(0, color='red', linestyle='--', linewidth=1) # Garis indikator pertumbuhan nol
+plt.grid(True, linestyle=':', alpha=0.6)
+plt.legend(title='Negara')
+plt.show()
+
+# *Catatan Insight: Analisis stabilitas pertumbuhan dan tahun-tahun resesi (nilai negatif).*
+# 1. Pilih Tahun Kunci (misalnya, tahun terakhir dan tahun 1980 untuk perbandingan)
+year_start = 1980
+year_end = df_clean['Year'].max()
+df_dist = df_clean[df_clean['Year'].isin([year_start, year_end])]
+
+# 2. Plot Violin Plot untuk melihat distribusi dan kesenjangan
+plt.figure(figsize=(10, 6))
+sns.violinplot(
+    x='Year',
+    y='GDP_Per_Capita',
+    data=df_dist,
+    palette={'1980': '#FFC300', str(year_end): '#581845'},
+    inner='quartile', # Menunjukkan kuartil (25%, 50%, 75%)
+    scale='width'
+)
+plt.yscale('log') # Menggunakan skala logaritma karena perbedaan nilainya sangat besar
+plt.title(f'Distribusi GDP Per Kapita Global (Perbandingan {year_start} vs {year_end})', fontsize=16)
+plt.xlabel('Tahun')
+plt.ylabel('GDP Per Kapita (US$, Skala Logaritmik)')
+plt.show()
+
+# *Catatan Insight: Perhatikan pelebaran atau penyempitan kesenjangan (panjang plot).*
+# 1. Hitung rata-rata GDP per kapita global setiap tahun
+df_global_avg = df_clean.groupby('Year')['GDP_Per_Capita'].mean().reset_index()
+
+# 2. Plot Tren Rata-rata Global menggunakan Seaborn
+plt.figure(figsize=(12, 6))
+# Menggunakan sns.lineplot
+sns.lineplot(x='Year', y='GDP_Per_Capita', data=df_global_avg, linewidth=3, color='#0077B6')
+
+# Menambahkan anotasi untuk krisis kunci
+plt.annotate('Krisis 2009', xy=(2009, 12000), xytext=(2000, 15000),
+             arrowprops=dict(facecolor='black', shrink=0.05), fontsize=10)
+plt.annotate('Pandemi 2020', xy=(2020, 16000), xytext=(2010, 17000),
+             arrowprops=dict(facecolor='black', shrink=0.05), fontsize=10)
+
+plt.title('Tren Rata-Rata GDP Per Kapita Global (1960 - 2024)', fontsize=16, fontweight='bold')
+plt.xlabel('Tahun', fontsize=12)
+plt.ylabel('GDP Per Kapita Rata-Rata (US$)', fontsize=12)
+plt.show()
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+import numpy as np
+
+# A. Konfigurasi Visualisasi Seaborn
+# Menggunakan tema yang Anda spesifikasikan
+sns.set_theme(style="darkgrid")
+
+# B. Membaca dan Membersihkan Data Awal (Diasumsikan sudah berjalan sebelumnya)
+file_name = 'API_NY.GDP.PCAP.CD_DS2_en_csv_v2_134819.csv'
+df = pd.read_csv(file_name, skiprows=4)
+
+df_gdp = df.drop(columns=['Indicator Name', 'Indicator Code'])
+id_vars = ['Country Name', 'Country Code']
+value_vars = [col for col in df_gdp.columns if col.isdigit() and len(col) == 4]
+
+df_long = pd.melt(
+    df_gdp,
+    id_vars=id_vars,
+    value_vars=value_vars,
+    var_name='Year',
+    value_name='GDP_Per_Capita'
+)
+
+df_long['Year'] = df_long['Year'].astype(int)
+df_long['GDP_Per_Capita'] = pd.to_numeric(df_long['GDP_Per_Capita'], errors='coerce')
+df_clean = df_long.dropna(subset=['GDP_Per_Capita']).copy()
+
+# E. Persiapan Data Tambahan untuk Lineplot (Menciptakan Kolom 'style')
+countries_selected = ['Indonesia', 'China', 'United States', 'India', 'Germany', 'Brazil']
+df_compare = df_clean[df_clean['Country Name'].isin(countries_selected)].copy()
+
+# Menentukan Status Pengembangan untuk parameter 'style'
+developed_countries = ['United States', 'Germany']
+df_compare['Development_Status'] = df_compare['Country Name'].apply(
+    lambda x: 'Developed' if x in developed_countries else 'Emerging'
+)
+
+# Filter data agar plot lebih fokus dan relevan (1980 ke atas)
+df_compare = df_compare[df_compare['Year'] >= 1980]
+
+# F. Visualisasi Lineplot Seaborn (Menggunakan Hue dan Style)
+plt.figure(figsize=(15, 8))
+sns.lineplot(
+    x="Year",
+    y="GDP_Per_Capita",
+    hue="Country Name",      # Perbedaan warna untuk setiap negara
+    style="Development_Status",  # Perbedaan jenis garis (penuh/putus-putus) berdasarkan status
+    data=df_compare,
+    linewidth=2.5,
+    palette='Spectral'
+)
+
+# Menambahkan detail plot
+plt.title('Perbandingan GDP Per Kapita: Negara Kunci Berdasarkan Status Pengembangan', fontsize=18, fontweight='bold')
+plt.xlabel('Tahun', fontsize=14)
+plt.ylabel('GDP Per Kapita (US$)', fontsize=14)
+plt.legend(title='Negara', loc='upper left', frameon=True)
+plt.show()
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+import numpy as np
+import warnings
+
+# Mengabaikan warning yang mungkin muncul dari Seaborn/Pandas
+warnings.filterwarnings("ignore")
+
+# A. Membaca dan Membersihkan Data Awal
+file_name = 'API_NY.GDP.PCAP.CD_DS2_en_csv_v2_134819.csv'
+df = pd.read_csv(file_name, skiprows=4)
+
+df_gdp = df.drop(columns=['Indicator Name', 'Indicator Code'])
+id_vars = ['Country Name', 'Country Code']
+value_vars = [col for col in df_gdp.columns if col.isdigit() and len(col) == 4]
+
+df_long = pd.melt(
+    df_gdp,
+    id_vars=id_vars,
+    value_vars=value_vars,
+    var_name='Year',
+    value_name='GDP_Per_Capita'
+)
+
+df_long['Year'] = df_long['Year'].astype(int)
+df_long['GDP_Per_Capita'] = pd.to_numeric(df_long['GDP_Per_Capita'], errors='coerce')
+df_clean = df_long.dropna(subset=['GDP_Per_Capita']).copy()
+
+# B. Memilih 10 Negara Representatif untuk Ridgeline Plot
+# Memilih negara dari berbagai tingkat ekonomi (Anda bisa ubah daftar ini)
+countries_selected = [
+    'United States', 'Germany', 'Japan', 'Singapore', # Developed/High GDP
+    'China', 'Brazil', 'Russian Federation', # Middle/BRICS
+    'Indonesia', 'India', 'Nigeria' # Emerging/Lower GDP
+]
+
+df_plot = df_clean[df_clean['Country Name'].isin(countries_selected)].copy()
+
+# Mengurutkan negara berdasarkan GDP rata-rata (dari terendah ke tertinggi)
+gdp_order = df_plot.groupby('Country Name')['GDP_Per_Capita'].mean().sort_values().index
+df_plot['Country Name'] = pd.Categorical(df_plot['Country Name'], categories=gdp_order, ordered=True)
+df_plot.sort_values(by='Country Name', inplace=True)
+
+
+# C. Implementasi Ridgeline Plot (Joy Plot)
+sns.set_theme(style="white", rc={"axes.facecolor": (0, 0, 0, 0)})
+
+# 1. Inisialisasi FacetGrid object
+# Tinggi disesuaikan (height=.7) dan aspek (aspect=15)
+pal = sns.cubehelix_palette(len(countries_selected), rot=-.25, light=.7)
+g = sns.FacetGrid(df_plot, row="Country Name", hue="Country Name", aspect=15, height=.7, palette=pal)
+
+# 2. Gambar densitas (KDE)
+# KDE Plot yang diisi (fill=True)
+g.map(sns.kdeplot, "GDP_Per_Capita",
+      bw_adjust=.5, clip_on=False,
+      fill=True, alpha=1, linewidth=1.5)
+# KDE Plot garis putih untuk kontur
+g.map(sns.kdeplot, "GDP_Per_Capita", clip_on=False, color="w", lw=2, bw_adjust=.5)
+
+# 3. Menambahkan garis nol (base line)
+g.refline(y=0, linewidth=2, linestyle="-", color=None, clip_on=False)
+
+
+# 4. Fungsi untuk melabeli plot
+def label(x, color, label):
+    ax = plt.gca()
+    # Teks diletakkan di koordinat sumbu (0, 0.2)
+    ax.text(0, .2, label, fontweight="bold", color=color,
+            ha="left", va="center", transform=ax.transAxes, fontsize=12)
+
+
+g.map(label, "GDP_Per_Capita")
+
+# 5. Penyesuaian Visual
+# Atur subplots agar tumpang tindih (overlap)
+g.figure.subplots_adjust(hspace=-.55)
+
+# Hapus detail sumbu yang tidak cocok dengan tumpang tindih
+g.set_titles("")
+g.set(yticks=[], ylabel="", xlabel="Distribusi Historis GDP Per Kapita (US$)")
+g.despine(bottom=True, left=True)
+
+# Tambahkan Judul Keseluruhan
+plt.suptitle("Ridgeline Plot: Distribusi Historis GDP Per Kapita (1960-2024)",
+             fontsize=20, fontweight='bold', y=1.02)
+plt.show()
